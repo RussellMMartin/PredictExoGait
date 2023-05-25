@@ -47,7 +47,7 @@
 % predictive simulations generated in Falisse et al. 2019.  As such,
 % they deviate slightly from typical experimental gait data.
 
-clear all; close all; clc;
+clear all; close all; % clc;
 
 % Load the Moco libraries
 import org.opensim.modeling.*;
@@ -56,7 +56,8 @@ import org.opensim.modeling.*;
 % assuming this script is in Track folder, baseDir should be something like
 % "C:\Users\russe\Documents\stanford\PredictExoGait"
 baseDir = fileparts(cd); 
-loc_ReferenceTrackingData = [baseDir,'/Experiment/NW1_muscleDrivenIK_raisePelvis.sto'];
+% loc_ReferenceTrackingData = [baseDir,'/Experiment/NW1_muscleDrivenIK_raisePelvis.sto'];
+loc_ReferenceTrackingData = [baseDir,'/Experiment/NW1_muscleDrivenIK_ground.sto'];
 loc_model = [baseDir,'/Models/Ong_gait9dof18musc_addMarkers_scalePB.osim'];
 loc_GRF = [baseDir, '/Experiment/NW1_external_forces_trim_stride.xml'];
 
@@ -81,9 +82,9 @@ track.setName('gaitTracking');
 % Note: If GRFTrackingWeight is set to 0 then GRFs will not be tracked. Setting
 % GRFTrackingWeight to 1 will cause the total tracking error (states + GRF) to
 % have about the same magnitude as control effort in the final objective value.
-controlEffortWeight = 1;
-stateTrackingWeight = 1;
-GRFTrackingWeight   = 10; % TODO increase for initial guess (along w residuals)
+controlEffortWeight = .1;
+stateTrackingWeight = .1;
+GRFTrackingWeight   = 1; % TODO increase for initial guess (along w residuals)
 
 
 % Reference data for tracking problem
@@ -216,7 +217,8 @@ problem.setStateInfo('/jointset/knee_l/knee_angle_l/value', [-50*pi/180, 0]);
 problem.setStateInfo('/jointset/knee_r/knee_angle_r/value', [-50*pi/180, 0]);
 problem.setStateInfo('/jointset/ankle_l/ankle_angle_l/value', [-15*pi/180, 25*pi/180]);
 problem.setStateInfo('/jointset/ankle_r/ankle_angle_r/value', [-15*pi/180, 25*pi/180]);
-problem.setStateInfo('/jointset/lumbar/lumbar/value', [0, 20*pi/180]);
+problem.setStateInfo('/jointset/lumbar/lumbar/value', [-0.0873, -0.0873]);
+% problem.setStateInfo('/jointset/lumbar/lumbar/value', [0, 20*pi/180]);
 
 % Reserves
 % ======
@@ -237,10 +239,16 @@ solver = study.initCasADiSolver();
 solver.set_num_mesh_intervals(50);
 solver.set_verbosity(2);
 solver.set_optim_solver('ipopt');
-solver.set_optim_convergence_tolerance(1e-4);
-solver.set_optim_constraint_tolerance(1e-4);
+solver.set_optim_convergence_tolerance(1e-4); % sensitive to obj fcn scaling, if >10e5 can loosen conv tol
+% scale objective to be between 0.1 and 10 (~iter 100)
+% for that, 1e-1 or looser
+% in future, use convergence analysis to determine tolerances
+solver.set_optim_constraint_tolerance(1e-3); % 10e-3 or 10e-4
 % solver.set_optim_max_iterations(500);
 gaitTrackingSolution = study.solve();
+
+gaitTrackingSolutionUnsealed = gaitTrackingSolution.unseal();
+mocoPlotTrajectory(gaitTrackingSolutionUnsealed)
 
 % Create a full stride from the periodic single step solution.
 % For details, view the Doxygen documentation for createPeriodicTrajectory().
@@ -256,10 +264,10 @@ disp('saved fullStride to gaitTracking_solution_fullStride.sto');
 % ==============================
 contact_r = StdVectorString();
 contact_l = StdVectorString();
-contact_r.add('contactHeel_r');
-contact_r.add('contactFront_r');
-contact_l.add('contactHeel_l');
-contact_l.add('contactFront_l');
+contact_r.add('/forceset/contactHeel_r');
+contact_r.add('/forceset/contactFront_r');
+contact_l.add('/forceset/contactHeel_l');
+contact_l.add('/forceset/contactFront_l');
 
 externalForcesTableFlat = opensimMoco.createExternalLoadsTableForGait(model, ...
                                  fullStride,contact_r,contact_l);
