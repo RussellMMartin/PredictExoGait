@@ -56,7 +56,7 @@ import org.opensim.modeling.*;
 % assuming this script is in Track folder, baseDir should be something like
 % "C:\Users\russe\Documents\stanford\PredictExoGait"
 baseDir = fileparts(cd); 
-loc_ReferenceTrackingData = [baseDir,'/Experiment/NW1_muscleDrivenIK.sto'];
+loc_ReferenceTrackingData = [baseDir,'/Experiment/NW1_muscleDrivenIK_raisePelvis.sto'];
 loc_model = [baseDir,'/Models/Ong_gait9dof18musc_addMarkers_scalePB.osim'];
 loc_GRF = [baseDir, '/Experiment/NW1_external_forces_trim_stride.xml'];
 
@@ -100,6 +100,9 @@ modelProcessor.append(ModOpReplaceMusclesWithDeGrooteFregly2016());
 modelProcessor.append(ModOpIgnorePassiveFiberForcesDGF());
 % Only valid for DeGrooteFregly2016Muscles.
 modelProcessor.append(ModOpScaleActiveFiberForceCurveWidthDGF(1.5));
+optimalForce = 10000;
+bound = 1;
+modelProcessor.append(ModOpAddReserves(optimalForce, bound));
 
 track.setModel(modelProcessor);
 track.setStatesReference(tableProcessor);
@@ -122,57 +125,61 @@ problem = study.updProblem();
 % --------
 % This goal allows us to simulate only one step with left-right symmetry
 % that we can then double to create a full gait cycle.
-symmetryGoal = MocoPeriodicityGoal('symmetryGoal');
-problem.addGoal(symmetryGoal);
-model = modelProcessor.process();
-model.initSystem();
+doSymmetry = false;
 
-% Symmetric coordinate values (except for pelvis_tx) and speeds. Here, we 
-% constrain final coordinate values of one leg to match the initial value of the 
-% other leg. Or, in the case of the pelvis_tx value, we constrain the final 
-% value to be the same as the initial value.
-for i = 1:model.getNumStateVariables()
-    currentStateName = string(model.getStateVariableNames().getitem(i-1));
-    if startsWith(currentStateName , '/jointset')
-        if contains(currentStateName,'_r')
-            pair = MocoPeriodicityGoalPair(currentStateName, ...
-                           regexprep(currentStateName,'_r','_l'));
-            symmetryGoal.addStatePair(pair);
-        end
-        if contains(currentStateName,'_l')
-            pair = MocoPeriodicityGoalPair(currentStateName, ...
-                           regexprep(currentStateName,'_l','_r'));
-            symmetryGoal.addStatePair(pair);
-        end
-        if (~contains(currentStateName,'_r') && ...
-            ~contains(currentStateName,'_l') && ...
-            ~contains(currentStateName,'pelvis_tx/value') && ...
-            ~contains(currentStateName,'/activation'))
-            symmetryGoal.addStatePair(MocoPeriodicityGoalPair(currentStateName));
+if doSymmetry
+    symmetryGoal = MocoPeriodicityGoal('symmetryGoal');
+    problem.addGoal(symmetryGoal);
+    model = modelProcessor.process();
+    model.initSystem();
+    
+    % Symmetric coordinate values (except for pelvis_tx) and speeds. Here, we 
+    % constrain final coordinate values of one leg to match the initial value of the 
+    % other leg. Or, in the case of the pelvis_tx value, we constrain the final 
+    % value to be the same as the initial value.
+    for i = 1:model.getNumStateVariables()
+        currentStateName = string(model.getStateVariableNames().getitem(i-1));
+        if startsWith(currentStateName , '/jointset')
+            if contains(currentStateName,'_r')
+                pair = MocoPeriodicityGoalPair(currentStateName, ...
+                               regexprep(currentStateName,'_r','_l'));
+                symmetryGoal.addStatePair(pair);
+            end
+            if contains(currentStateName,'_l')
+                pair = MocoPeriodicityGoalPair(currentStateName, ...
+                               regexprep(currentStateName,'_l','_r'));
+                symmetryGoal.addStatePair(pair);
+            end
+            if (~contains(currentStateName,'_r') && ...
+                ~contains(currentStateName,'_l') && ...
+                ~contains(currentStateName,'pelvis_tx/value') && ...
+                ~contains(currentStateName,'/activation'))
+                symmetryGoal.addStatePair(MocoPeriodicityGoalPair(currentStateName));
+            end
         end
     end
-end
-
-% Symmetric muscle activations. Here, we constrain final muscle activation 
-% values of one leg to match the initial activation values of the other leg.
-for i = 1:model.getNumStateVariables()
-    currentStateName = string(model.getStateVariableNames().getitem(i-1));
-    if endsWith(currentStateName,'/activation')
-        if contains(currentStateName,'_r')
-            pair = MocoPeriodicityGoalPair(currentStateName, ...
-                         regexprep(currentStateName,'_r','_l'));
-            symmetryGoal.addStatePair(pair);
-        end
-        if contains(currentStateName,'_l')
-            pair = MocoPeriodicityGoalPair(currentStateName, ...
-                         regexprep(currentStateName,'_l','_r'));
-            symmetryGoal.addStatePair(pair);
+    
+    % Symmetric muscle activations. Here, we constrain final muscle activation 
+    % values of one leg to match the initial activation values of the other leg.
+    for i = 1:model.getNumStateVariables()
+        currentStateName = string(model.getStateVariableNames().getitem(i-1));
+        if endsWith(currentStateName,'/activation')
+            if contains(currentStateName,'_r')
+                pair = MocoPeriodicityGoalPair(currentStateName, ...
+                             regexprep(currentStateName,'_r','_l'));
+                symmetryGoal.addStatePair(pair);
+            end
+            if contains(currentStateName,'_l')
+                pair = MocoPeriodicityGoalPair(currentStateName, ...
+                             regexprep(currentStateName,'_l','_r'));
+                symmetryGoal.addStatePair(pair);
+            end
         end
     end
-end
-
-% The lumbar coordinate actuator control is symmetric.
-% symmetryGoal.addControlPair(MocoPeriodicityGoalPair('/lumbarAct'));
+    
+    % The lumbar coordinate actuator control is symmetric.
+    % symmetryGoal.addControlPair(MocoPeriodicityGoalPair('/lumbarAct'));
+end 
 
 % Get a reference to the MocoControlGoal that is added to every MocoTrack
 % problem by default and change the weight
@@ -211,9 +218,28 @@ problem.setStateInfo('/jointset/ankle_l/ankle_angle_l/value', [-15*pi/180, 25*pi
 problem.setStateInfo('/jointset/ankle_r/ankle_angle_r/value', [-15*pi/180, 25*pi/180]);
 problem.setStateInfo('/jointset/lumbar/lumbar/value', [0, 20*pi/180]);
 
+% Reserves
+% ======
+model = modelProcessor.process();
+model.initSystem();
+forceSet = model.getForceSet();
+for i = 0:forceSet.getSize()-1
+   forcePath = forceSet.get(i).getAbsolutePathString();
+   if contains(string(forcePath), 'reserve')
+       effort.setWeightForControl(forcePath, .01);
+   end
+end
 
-% Solve the problem
+
+% Configure and solve the problem
 % =================
+solver = study.initCasADiSolver();
+solver.set_num_mesh_intervals(50);
+solver.set_verbosity(2);
+solver.set_optim_solver('ipopt');
+solver.set_optim_convergence_tolerance(1e-4);
+solver.set_optim_constraint_tolerance(1e-4);
+% solver.set_optim_max_iterations(500);
 gaitTrackingSolution = study.solve();
 
 % Create a full stride from the periodic single step solution.
@@ -238,8 +264,6 @@ contact_l.add('contactFront_l');
 externalForcesTableFlat = opensimMoco.createExternalLoadsTableForGait(model, ...
                                  fullStride,contact_r,contact_l);
 STOFileAdapter.write(externalForcesTableFlat, ...
-                             'gaitTracking_solutionGRF_fullStride.sto');
+                             'gaitTracking_solutionGRF_fullStride_trackNW.sto');
 
-
-% Uncomment next line to terminate after solving only the tracking problem
-return;
+return
