@@ -56,8 +56,8 @@ import org.opensim.modeling.*;
 % assuming this script is in Track folder, baseDir should be something like
 % "C:\Users\russe\Documents\stanford\PredictExoGait"
 baseDir = fileparts(cd); 
-% loc_ReferenceTrackingData = [baseDir,'/Experiment/NW1_muscleDrivenIK_raisePelvis.sto'];
-loc_ReferenceTrackingData = [baseDir,'/Experiment/NW1_muscleDrivenIK_ground.sto'];
+loc_ReferenceTrackingData = [baseDir,'/Experiment/NW1_muscleDrivenIK_raisePelvis.sto'];
+% loc_ReferenceTrackingData = [baseDir,'/Experiment/NW1_muscleDrivenIK_ground.sto'];
 loc_model = [baseDir,'/Models/Ong_gait9dof18musc_addMarkers_scalePB.osim'];
 loc_GRF = [baseDir, '/Experiment/NW1_external_forces_trim_stride.xml'];
 
@@ -239,7 +239,7 @@ solver = study.initCasADiSolver();
 solver.set_num_mesh_intervals(50);
 solver.set_verbosity(2);
 solver.set_optim_solver('ipopt');
-solver.set_optim_convergence_tolerance(1e-4); % sensitive to obj fcn scaling, if >10e5 can loosen conv tol
+solver.set_optim_convergence_tolerance(1e0); % sensitive to obj fcn scaling, if >10e5 can loosen conv tol
 % scale objective to be between 0.1 and 10 (~iter 100)
 % for that, 1e-1 or looser
 % in future, use convergence analysis to determine tolerances
@@ -248,13 +248,27 @@ solver.set_optim_constraint_tolerance(1e-3); % 10e-3 or 10e-4
 gaitTrackingSolution = study.solve();
 
 gaitTrackingSolutionUnsealed = gaitTrackingSolution.unseal();
-mocoPlotTrajectory(gaitTrackingSolutionUnsealed)
+
+% get file save location: ./Results/YYYY-MM-DD #
+for i=1:1000
+    filename = ['./Results/', char(datetime('now','Format','yyyy-MM-dd')), ' ', num2str(i),'/'];
+    if ~exist(filename)
+        break; file
+    end
+end
+mkdir(filename)
+
+% plot
+close all;
+mocoPlotTrajectory(filename, gaitTrackingSolutionUnsealed)
 
 % Create a full stride from the periodic single step solution.
 % For details, view the Doxygen documentation for createPeriodicTrajectory().
-fullStride = opensimMoco.createPeriodicTrajectory(gaitTrackingSolution);
-fullStride.write('gaitTracking_solution_fullStride.sto');
-disp('saved fullStride to gaitTracking_solution_fullStride.sto');
+gaitTrackingSolution.write([filename,'gaitTracking_solution_notFullStride.sto']);
+disp(['saved notFullStride to gaitTracking_solution_fullStride.sto at ', filename]);
+% fullStride = opensimMoco.createPeriodicTrajectory(gaitTrackingSolution);
+% fullStride.write([filename,'gaitTracking_solution_fullStride.sto']);
+% disp(['saved fullStride to gaitTracking_solution_fullStride.sto at ', filename]);
 
 % Uncomment next line to visualize the result
 % study.visualize(fullStride);
