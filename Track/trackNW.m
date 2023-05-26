@@ -47,7 +47,9 @@
 % predictive simulations generated in Falisse et al. 2019.  As such,
 % they deviate slightly from typical experimental gait data.
 
+
 clear all; close all; % clc;
+isMac = isunix; % figure out if running on Ava or Russell's computer
 
 % Load the Moco libraries
 import org.opensim.modeling.*;
@@ -249,12 +251,17 @@ gaitTrackingSolution = study.solve();
 
 gaitTrackingSolutionUnsealed = gaitTrackingSolution.unseal();
 
-% get file save location: ./Results/YYYY-MM-DD #
+% get results file save location: ./Results/YYYY-MM-DD #
 for i=1:1000
-    filename = ['./Results/', char(datetime('now','Format','yyyy-MM-dd')), ' ', num2str(i),'/'];
+    filename = ['./Results/', char(datetime('now','Format','yyyy-MM-dd')), ' ', num2str(i)];
     if ~exist(filename)
         break; file
     end
+end
+if isMac
+    filename = [filename, 'A/'];
+else
+    filename = [filename, 'R/'];
 end
 mkdir(filename)
 
@@ -266,9 +273,9 @@ mocoPlotTrajectory(filename, gaitTrackingSolutionUnsealed)
 % For details, view the Doxygen documentation for createPeriodicTrajectory().
 gaitTrackingSolution.write([filename,'gaitTracking_solution_notFullStride.sto']);
 disp(['saved notFullStride to gaitTracking_solution_fullStride.sto at ', filename]);
-% fullStride = opensimMoco.createPeriodicTrajectory(gaitTrackingSolution);
-% fullStride.write([filename,'gaitTracking_solution_fullStride.sto']);
-% disp(['saved fullStride to gaitTracking_solution_fullStride.sto at ', filename]);
+fullStride = opensimMoco.createPeriodicTrajectory(gaitTrackingSolution);
+fullStride.write([filename,'gaitTracking_solution_fullStride.sto']);
+disp(['saved fullStride to gaitTracking_solution_fullStride.sto at ', filename]);
 
 % Uncomment next line to visualize the result
 % study.visualize(fullStride);
@@ -286,6 +293,6 @@ contact_l.add('/forceset/contactFront_l');
 externalForcesTableFlat = opensimMoco.createExternalLoadsTableForGait(model, ...
                                  fullStride,contact_r,contact_l);
 STOFileAdapter.write(externalForcesTableFlat, ...
-                             'gaitTracking_solutionGRF_fullStride_trackNW.sto');
+                             [filename, 'gaitTracking_solutionGRF_fullStride_trackNW.sto']);
 
 return
