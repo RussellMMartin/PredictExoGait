@@ -85,7 +85,7 @@ track.setName('gaitTracking');
 % GRFTrackingWeight to 1 will cause the total tracking error (states + GRF) to
 % have about the same magnitude as control effort in the final objective value.
 controlEffortWeight = .1;
-stateTrackingWeight = .1;
+stateTrackingWeight = 1;
 GRFTrackingWeight   = 1; % TODO increase for initial guess (along w residuals)
 
 
@@ -96,7 +96,6 @@ tableProcessor.append(TabOpLowPassFilter(6));
 
 
 modelProcessor = ModelProcessor(loc_model);
-% modelProcessor.append(ModOpAddExternalLoads("Day6_NW1_external_forces_trim.xml"));
 modelProcessor.append(ModOpIgnoreTendonCompliance());
 modelProcessor.append(ModOpReplaceMusclesWithDeGrooteFregly2016());
 % Only valid for DeGrooteFregly2016Muscles.
@@ -128,7 +127,7 @@ problem = study.updProblem();
 % --------
 % This goal allows us to simulate only one step with left-right symmetry
 % that we can then double to create a full gait cycle.
-doSymmetry = false;
+doSymmetry = true;
 
 if doSymmetry
     symmetryGoal = MocoPeriodicityGoal('symmetryGoal');
@@ -220,7 +219,6 @@ problem.setStateInfo('/jointset/knee_r/knee_angle_r/value', [-50*pi/180, 0]);
 problem.setStateInfo('/jointset/ankle_l/ankle_angle_l/value', [-15*pi/180, 25*pi/180]);
 problem.setStateInfo('/jointset/ankle_r/ankle_angle_r/value', [-15*pi/180, 25*pi/180]);
 problem.setStateInfo('/jointset/lumbar/lumbar/value', [-0.0873, -0.0873]);
-% problem.setStateInfo('/jointset/lumbar/lumbar/value', [0, 20*pi/180]);
 
 % Reserves
 % ======
@@ -241,9 +239,8 @@ solver = study.initCasADiSolver();
 solver.set_num_mesh_intervals(50);
 solver.set_verbosity(2);
 solver.set_optim_solver('ipopt');
-solver.set_optim_convergence_tolerance(1e0); % sensitive to obj fcn scaling, if >10e5 can loosen conv tol
-% scale objective to be between 0.1 and 10 (~iter 100)
-% for that, 1e-1 or looser
+solver.set_optim_convergence_tolerance(1e0);
+% scale objective to be between 0.1 and 10 (~iter 100) with tol 1e-1 or looser
 % in future, use convergence analysis to determine tolerances
 solver.set_optim_constraint_tolerance(1e-3); % 10e-3 or 10e-4
 % solver.set_optim_max_iterations(500);
@@ -252,22 +249,25 @@ gaitTrackingSolution = study.solve();
 gaitTrackingSolutionUnsealed = gaitTrackingSolution.unseal();
 
 % get results file save location: ./Results/YYYY-MM-DD #
+if isMac
+    name = 'A';
+else
+    name = 'R';
+end
+
 for i=1:1000
-    filename = ['./Results/', char(datetime('now','Format','yyyy-MM-dd')), ' ', num2str(i)];
+    filename = ['./Results/', char(datetime('now','Format','yyyy-MM-dd')), ' ', num2str(i), name];
     if ~exist(filename)
         break; file
     end
 end
-if isMac
-    filename = [filename, 'A/'];
-else
-    filename = [filename, 'R/'];
-end
+
 mkdir(filename)
+filename = append(filename, '/');
 
 % plot
 close all;
-mocoPlotTrajectory(filename, gaitTrackingSolutionUnsealed)
+mocoPlotTrajectory(filename, gaitTrackingSolution)
 
 % Create a full stride from the periodic single step solution.
 % For details, view the Doxygen documentation for createPeriodicTrajectory().
