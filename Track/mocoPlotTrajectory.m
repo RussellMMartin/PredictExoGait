@@ -1,5 +1,6 @@
 
-function mocoPlotTrajectory(saveLoc, trajA, trajB, nameA, nameB)
+%% mocoPlotTrajectory plots states, controls, and grfs after trackNW runs
+function mocoPlotTrajectory(saveLoc, trajA, trajB, nameA, nameB, grfA, grfB)
 % Plot a MocoTrajectory. Optionally, specify a second trajectory and names
 % for the trajectories.
 % Pass empty character '' if you don't want to save.
@@ -111,6 +112,49 @@ for i = 0:numControls-1
 end
 sgtitle('Controls')
 
+%% GRFs. 
+if nargin > 5
+    figure('units','normalized','outerposition',[0 0 1 1]);
+    [xA, yA, namesA] = getGRFDataFromFile(grfA.loc, grfA.file);
+    numGRFs = numel(namesA)-1; 
+    numCols = 4;
+    numRows = ceil(numGRFs/numCols);
+    
+    plotgrfB = false;
+    if nargin == 7
+        plotgrfB = true;
+        [xB, yB, namesB] = getGRFDataFromFile(grfB.loc, grfB.file);
+    end
+
+    for i=1:numGRFs
+        % plot
+        subplot(numCols, numRows, i)
+        plot(xA, yA(:,i), '--r', 'linewidth', width);
+        if plotgrfB
+            plot(xB, yB(:,i), '--b', 'linewidth', width);
+        end
+        
+        % title, axis labels, legend
+        name = namesA(i);
+        title(name, 'Interpreter', 'none')
+        xlabel('time (s)')
+        if contains(name, 'force')
+            ylabel('Force (N?)');
+        else
+            ylabel('Torque(Nm?)');
+        end
+        if i == 0 && nargin > 2
+            if nargin == 5
+                legend(nameA, nameB);
+            else
+                legend('A', 'B');
+            end
+        end
+    end
+
+end
+
+%% Save plot. 
 if ~strcmp(saveLoc,'') % if save location has been specified, save
     filename = [saveLoc,'statesAndControls.pdf'];
     if ~isfile(filename)
@@ -125,3 +169,12 @@ if ~strcmp(saveLoc,'') % if save location has been specified, save
 end
 
 return
+
+
+%%
+function [x, y, names] = getGRFDataFromFile(loc, file)
+    [data, C, ~] = readMOTSTOTRCfiles(loc, file);
+    x = data(:,1);
+    y = data(:, 2:end);
+    names = string(C);
+end

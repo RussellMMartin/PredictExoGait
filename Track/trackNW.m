@@ -58,11 +58,14 @@ import org.opensim.modeling.*;
 % assuming this script is in Track folder, baseDir should be something like
 % "C:\Users\russe\Documents\stanford\PredictExoGait"
 baseDir = fileparts(cd); 
-loc_ReferenceTrackingData = [baseDir,'/Experiment/NW1_muscleDrivenIK_raisePelvis.sto'];
+loc_ReferenceTrackingData = [baseDir,'/Experiment/'];
+file_ReferenceTrackingData = 'NW1_muscleDrivenIK_raisePelvis.sto';
+loc_referenceGRF = [baseDir,'/Experiment/'];
+file_referenceGRFxml = 'NW1_external_forces_trim_stride.xml';
+file_referenceGRFmot = 'NW1_grf_trim_stride.mot';
 % loc_ReferenceTrackingData = [baseDir,'/Experiment/NW1_muscleDrivenIK_ground.sto'];
-loc_model = [baseDir,'/Models/Ong_gait9dof18musc_addMarkers_scalePB.osim'];
-loc_GRF = [baseDir, '/Experiment/NW1_external_forces_trim_stride.xml'];
-
+loc_model = [baseDir,'/Models/'];
+file_model = 'Ong_gait9dof18musc_addMarkers_scalePB.osim';
 
 % ---------------------------------------------------------------------------
 % Set up a coordinate tracking problem where the goal is to minimize the
@@ -91,11 +94,11 @@ GRFTrackingWeight   = 1; % TODO increase for initial guess (along w residuals)
 
 % Reference data for tracking problem
 % tableProcessor = TableProcessor('MocoT_muscleDriven_OpensimIK_raisePelvis2.sto');
-tableProcessor = TableProcessor(loc_ReferenceTrackingData);
+tableProcessor = TableProcessor([loc_ReferenceTrackingData, file_ReferenceTrackingData]);
 tableProcessor.append(TabOpLowPassFilter(6));
 
 
-modelProcessor = ModelProcessor(loc_model);
+modelProcessor = ModelProcessor([loc_model, file_model]);
 % modelProcessor.append(ModOpAddExternalLoads("Day6_NW1_external_forces_trim.xml"));
 modelProcessor.append(ModOpIgnoreTendonCompliance());
 modelProcessor.append(ModOpReplaceMusclesWithDeGrooteFregly2016());
@@ -193,7 +196,7 @@ effort.setWeight(controlEffortWeight);
 if GRFTrackingWeight ~= 0
     % Track the right and left vertical and fore-aft ground reaction forces.
     contactTracking = MocoContactTrackingGoal('contact', GRFTrackingWeight);
-    contactTracking.setExternalLoadsFile(loc_GRF);
+    contactTracking.setExternalLoadsFile([loc_referenceGRF, file_referenceGRFxml]);
     forceNamesRightFoot = StdVectorString();
     forceNamesRightFoot.add('/forceset/contactHeel_r');
     forceNamesRightFoot.add('/forceset/contactFront_r');
@@ -253,29 +256,28 @@ gaitTrackingSolutionUnsealed = gaitTrackingSolution.unseal();
 
 % get results file save location: ./Results/YYYY-MM-DD #
 for i=1:1000
-    filename = ['./Results/', char(datetime('now','Format','yyyy-MM-dd')), ' ', num2str(i)];
-    if ~exist(filename)
-        break; file
+    resultsLoc = ['./Results/', char(datetime('now','Format','yyyy-MM-dd')), ' ', num2str(i)];
+    if isMac
+        resultsLoc = [resultsLoc, 'A/'];
+    else
+        resultsLoc = [resultsLoc, 'R/'];
+    end
+    if ~exist(resultsLoc)
+        break; 
     end
 end
-if isMac
-    filename = [filename, 'A/'];
-else
-    filename = [filename, 'R/'];
-end
-mkdir(filename)
+mkdir(resultsLoc)
 
-% plot
-close all;
-mocoPlotTrajectory(filename, gaitTrackingSolutionUnsealed)
 
 % Create a full stride from the periodic single step solution.
 % For details, view the Doxygen documentation for createPeriodicTrajectory().
-gaitTrackingSolution.write([filename,'gaitTracking_solution_notFullStride.sto']);
-disp(['saved notFullStride to gaitTracking_solution_fullStride.sto at ', filename]);
+notFullStrideFilename = 'gaitTracking_solution_notFullStride.sto';
+gaitTrackingSolution.write([resultsLoc, notFullStrideFilename]);
+disp(['saved notFullStride to', resultsLoc, notFullStrideFilename]);
+fullStrideFilename = 'gaitTracking_solution_fullStride.sto';
 fullStride = opensimMoco.createPeriodicTrajectory(gaitTrackingSolution);
-fullStride.write([filename,'gaitTracking_solution_fullStride.sto']);
-disp(['saved fullStride to gaitTracking_solution_fullStride.sto at ', filename]);
+fullStride.write([resultsLoc,fullStrideFilename]);
+disp(['saved fullStride to', resultsLoc, fullStrideFilename]);
 
 % Uncomment next line to visualize the result
 % study.visualize(fullStride);
@@ -292,7 +294,26 @@ contact_l.add('/forceset/contactFront_l');
 
 externalForcesTableFlat = opensimMoco.createExternalLoadsTableForGait(model, ...
                                  fullStride,contact_r,contact_l);
+file_GRFsOut = 'gaitTracking_solutionGRF_fullStride_trackNW.sto';
 STOFileAdapter.write(externalForcesTableFlat, ...
-                             [filename, 'gaitTracking_solutionGRF_fullStride_trackNW.sto']);
+                             [resultsLoc, file_GRFsOut]);
+disp(['saved ext forces to gaitTracking_solutionGRF_fullStride_trackNW.sto at ', resultsLoc]);
+
+
+% plot
+close all;
+trajA.loc = resultsLoc;
+trajA.file = notFullStrideFilename;
+trajB.loc = loc_ReferenceTrackingData;
+trajB.file = file_ReferenceTrackingData;
+grfA.loc = resultsLoc;
+grfA.file = file_GRFsOut;
+grfB.loc = loc_referenceGRF;
+grfB.file = file_referenceGRFmot;
+nameA = 'tracking output';
+nameB = 'reference';
+addpath([baseDir,'/Helpers/'])
+mocoPlotTrajectoryfromFile(resultsLoc, trajA, trajB, nameA, nameB, grfA, grfB);
+
 
 return
