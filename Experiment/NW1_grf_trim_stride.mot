@@ -4,7 +4,7 @@ DataType=double
 version=3
 OpenSimVersion=4.1
 endheader
-time	ground_force_1_vx	ground_force_1_vy	ground_force_1_vz	ground_force_1_px	ground_force_1_py	ground_force_1_pz	ground_force_1_mx	ground_force_1_my	ground_force_1_mz	ground_force_2_vx	ground_force_2_vy	ground_force_2_vz	ground_force_2_px	ground_force_2_py	ground_force_2_pz	ground_force_2_mx	ground_force_2_my	ground_force_2_mz
+time	ground_force_l_vx	ground_force_l_vy	ground_force_l_vz	ground_force_l_px	ground_force_l_py	ground_force_l_pz	ground_force_l_mx	ground_force_l_my	ground_force_l_mz	ground_force_r_vx	ground_force_r_vy	ground_force_r_vz	ground_force_r_px	ground_force_r_py	ground_force_r_pz	ground_force_r_mx	ground_force_r_my	ground_force_r_mz
 306.6	-2.58133	-7.38926	-2.30133	2.18168	2.42216e-16	0.325783	3.4941e-16	-3.1472	-1.81899e-15	74.6006	772.28	-37.4534	0.769083	8.53854e-17	0.617238	6.00277e-16	-5.40682	-6.66441e-32
 306.61	-2.81021	-7.23667	2.3526	1.09753	1.2185e-16	0.00372095	-8.45013e-17	0.76112	9.38153e-33	79.2545	781.588	-38.14	0.771638	8.5669e-17	0.613368	6.17258e-16	-5.55977	-6.85294e-32
 306.62	0.546722	-0.370218	0.826723	-3.5871	-3.98249e-16	-0.256991	3.27401e-16	-2.94897	-3.63488e-32	85.5106	775.942	-39.3607	0.756014	8.39344e-17	0.611139	2.36385e-16	-2.12917	-2.6244e-32

@@ -98,8 +98,12 @@ tableProcessor = TableProcessor([loc_ReferenceTrackingData, file_ReferenceTracki
 tableProcessor.append(TabOpLowPassFilter(6));
 
 
+<<<<<<< HEAD
+modelProcessor = ModelProcessor(loc_model);
+=======
 modelProcessor = ModelProcessor([loc_model, file_model]);
 % modelProcessor.append(ModOpAddExternalLoads("Day6_NW1_external_forces_trim.xml"));
+>>>>>>> improveTrackOutputPlotting
 modelProcessor.append(ModOpIgnoreTendonCompliance());
 modelProcessor.append(ModOpReplaceMusclesWithDeGrooteFregly2016());
 % Only valid for DeGrooteFregly2016Muscles.
@@ -131,7 +135,7 @@ problem = study.updProblem();
 % --------
 % This goal allows us to simulate only one step with left-right symmetry
 % that we can then double to create a full gait cycle.
-doSymmetry = false;
+doSymmetry = true;
 
 if doSymmetry
     symmetryGoal = MocoPeriodicityGoal('symmetryGoal');
@@ -260,18 +264,33 @@ else
 end
 
 for i=1:1000
-    resultsLoc = ['./Results/', char(datetime('now','Format','yyyy-MM-dd')), ' ', num2str(i), name];
-    if ~exist(resultsLoc)
+<<<<<<< HEAD
+    filename = ['./Results/', char(datetime('now','Format','yyyy-MM-dd')), ' ', num2str(i), name];
+    if ~exist(filename)
         break; file
     end
 end
 
-mkdir(resultsLoc)
-resultsLoc = append(resultsLoc, '/');
+mkdir(filename)
+filename = append(filename, '/');
 
 % plot
 close all;
-% mocoPlotTrajectory(filename, gaitTrackingSolution)
+mocoPlotTrajectory(filename, gaitTrackingSolution)
+=======
+    resultsLoc = ['./Results/', char(datetime('now','Format','yyyy-MM-dd')), ' ', num2str(i)];
+    if isMac
+        resultsLoc = [resultsLoc, 'A/'];
+    else
+        resultsLoc = [resultsLoc, 'R/'];
+    end
+    if ~exist(resultsLoc)
+        break; 
+    end
+end
+mkdir(resultsLoc)
+
+>>>>>>> improveTrackOutputPlotting
 
 % Create a full stride from the periodic single step solution.
 % For details, view the Doxygen documentation for createPeriodicTrajectory().

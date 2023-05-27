@@ -5,17 +5,17 @@
                 <applied_to_body>calcn_l</applied_to_body>
                 <force_expressed_in_body>ground</force_expressed_in_body>
                 <point_expressed_in_body>ground</point_expressed_in_body>
-                <force_identifier>ground_force_1_v</force_identifier>
-                <point_identifier>ground_force_1_p</point_identifier>
-                <torque_identifier>ground_force_1_m</torque_identifier>
+                <force_identifier>ground_force_l_v</force_identifier>
+                <point_identifier>ground_force_l_p</point_identifier>
+                <torque_identifier>ground_force_l_m</torque_identifier>
             </ExternalForce>
             <ExternalForce name="ForcePlate2">
                 <applied_to_body>calcn_r</applied_to_body>
                 <force_expressed_in_body>ground</force_expressed_in_body>
                 <point_expressed_in_body>ground</point_expressed_in_body>
-                <force_identifier>ground_force_2_v</force_identifier>
-                <point_identifier>ground_force_2_p</point_identifier>
-                <torque_identifier>ground_force_2_m</torque_identifier>
+                <force_identifier>ground_force_r_v</force_identifier>
+                <point_identifier>ground_force_r_p</point_identifier>
+                <torque_identifier>ground_force_r_m</torque_identifier>
             </ExternalForce>
         </objects>
         <datafile>NW1_grf_trim_stride.mot</datafile>
