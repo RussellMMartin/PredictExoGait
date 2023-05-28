@@ -267,7 +267,7 @@ end
 for i=1:1000
     resultsLoc = ['./Results/', char(datetime('now','Format','yyyy-MM-dd')), ' ', num2str(i), name];
     if ~exist(resultsLoc)
-        break; 
+        break; file
     end
 end
 
@@ -307,7 +307,7 @@ file_GRFsOut = 'gaitTracking_solutionGRF_fullStride_trackNW.sto';
 STOFileAdapter.write(externalForcesTableFlat, ...
                              [resultsLoc, file_GRFsOut]);
 disp(['saved ext forces to gaitTracking_solutionGRF_fullStride_trackNW.sto at ', resultsLoc]);
-save([resultsLoc, 'optSettings.mat'], '-struct', 's')
+
 
 % plot
 close all;
@@ -323,5 +323,6 @@ nameA = 'tracking output';
 nameB = 'reference';
 addpath([baseDir,'/Helpers/'])
 mocoPlotTrajectoryfromFile(resultsLoc, trajA, trajB, nameA, nameB, grfA, grfB);
+
 
 return
