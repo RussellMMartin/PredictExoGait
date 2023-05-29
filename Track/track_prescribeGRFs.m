@@ -19,31 +19,31 @@
 % function [track, solution] = exampleMocoTrack()
 
 % Solve the muscle-driven state tracking problem.
-[track, solution] = muscleDrivenStateTracking();
+% [track, solution] = muscleDrivenStateTracking();
 
 % Plot and save outputs
-control_names = ["hamstrings_r", "bifemsh_r", "glut_max_r", "iliopsoas_r", "rect_fem_r", ...
-    "vasti_r", "gastroc_r", "soleus_r", "tib_ant_r", "hamstrings_l", "bifemsh_l", ...
-    "glut_max_l", "iliopsoas_l", "rect_fem_l", "vasti_l", "gastroc_l", "soleus_l", ...
-    "tib_ant_l", "reserve_pelvis_tilt", "reserve_pelvis_tx", "reserve_pelvis_ty", ...
-    "reserve_hip_r", "reserve_knee_r", "reserve_ankle_r", "reserve_hip_l", ...
-    "reserve_knee_l", "reserve_ankle_l"];
-activations = solution.getControlsTrajectoryMat;
+% control_names = ["hamstrings_r", "bifemsh_r", "glut_max_r", "iliopsoas_r", "rect_fem_r", ...
+%     "vasti_r", "gastroc_r", "soleus_r", "tib_ant_r", "hamstrings_l", "bifemsh_l", ...
+%     "glut_max_l", "iliopsoas_l", "rect_fem_l", "vasti_l", "gastroc_l", "soleus_l", ...
+%     "tib_ant_l", "reserve_pelvis_tilt", "reserve_pelvis_tx", "reserve_pelvis_ty", ...
+%     "reserve_hip_r", "reserve_knee_r", "reserve_ankle_r", "reserve_hip_l", ...
+%     "reserve_knee_l", "reserve_ankle_l"];
+% activations = solution.getControlsTrajectoryMat;
+% 
+% figure
+% for m = 1:length(control_names)
+%     subplot(3,9,m)
+%     plot(activations(:,m), 'LineWidth', 2);
+%     title(control_names(m), 'Interpreter','none')
+%     ylim([0 0.5])
+% end
+% 
+% sol.activations = solution.getControlsTrajectoryMat();
+% sol.states = solution.getStatesTrajectoryMat();
+% save('solution.mat', 'sol')
 
-figure
-for m = 1:length(control_names)
-    subplot(3,9,m)
-    plot(activations(:,m), 'LineWidth', 2);
-    title(control_names(m), 'Interpreter','none')
-    ylim([0 0.5])
-end
 
-sol.activations = solution.getControlsTrajectoryMat();
-sol.states = solution.getStatesTrajectoryMat();
-save('solution.mat', 'sol')
-
-
-function [track, solution] = muscleDrivenStateTracking()
+% function [track, solution] = muscleDrivenStateTracking()
 
 import org.opensim.modeling.*;
 
@@ -65,7 +65,7 @@ modelProcessor.append(ModOpIgnorePassiveFiberForcesDGF());
 modelProcessor.append(ModOpScaleActiveFiberForceCurveWidthDGF(1.5));
 
 %
-modelProcessor.append(ModOpAddReserves(250));
+modelProcessor.append(ModOpAddReserves(1000,1));
 
 track.setModel(modelProcessor);
 
@@ -75,8 +75,8 @@ track.setModel(modelProcessor);
 % A TableProcessor with no operators, as we have here, simply returns the
 % base table.
 track.setStatesReference(TableProcessor("../Experiment/NW1_ik_trim_stride.mot"));
-track.set_states_global_tracking_weight(1);
-track.set_control_effort_weight(1);
+track.set_states_global_tracking_weight(10);
+% track.set_control_effort_weight(0.001);
 % default global tracking weight = 1, set to 10 in 3D tutorial
 % defualt control effort weight = 0.001
 
@@ -104,6 +104,20 @@ study = track.initialize();
 problem = study.updProblem();
 effort = MocoControlGoal.safeDownCast(problem.updGoal("control_effort"));
 
+% Bounds
+% ======
+problem.setStateInfo('/jointset/groundPelvis/pelvis_tilt/value', [-10*pi/180, 10*pi/180]);
+problem.setStateInfo('/jointset/groundPelvis/pelvis_tx/value', [0.75, 1.25]);
+problem.setStateInfo('/jointset/groundPelvis/pelvis_ty/value', [1, 1.1]);
+problem.setStateInfo('/jointset/hip_l/hip_flexion_l/value', [-1, 1]);
+problem.setStateInfo('/jointset/hip_r/hip_flexion_r/value', [-1, 1]);
+problem.setStateInfo('/jointset/knee_l/knee_angle_l/value', [-1, 0]);
+problem.setStateInfo('/jointset/knee_r/knee_angle_r/value', [-70*pi/180, 0]);
+problem.setStateInfo('/jointset/ankle_l/ankle_angle_l/value', [-40*pi/180, 25*pi/180]);
+problem.setStateInfo('/jointset/ankle_r/ankle_angle_r/value', [-40*pi/180, 15*pi/180]);
+problem.setStateInfo('/jointset/lumbar/lumbar/value', [-0.0873, -0.0873]);
+
+
 % Put a large weight on the pelvis CoordinateActuators, which act as the
 % residual, or 'hand-of-god', forces which we would like to keep as small
 % as possible.
@@ -112,12 +126,9 @@ model.initSystem();
 forceSet = model.getForceSet();
 for i = 0:forceSet.getSize()-1
    forcePath = forceSet.get(i).getAbsolutePathString();
-   if contains(string(forcePath), 'pelvis')
+   if contains(string(forcePath), 'reserve')
        effort.setWeightForControl(forcePath, 10);
    end
-%    if contains(string(forcePath), 'reserve')
-%        effort.setWeightForControl(forcePath, 10);
-%    end
 end
 
 % for i = 0:forceSet.getSize()-1
@@ -132,7 +143,19 @@ end
 
 % Solve and visualize.
 solution = study.solve();
-% study.visualize(solution);
-end
+solution.write('solution_prescribedGRFs.sto')
+study.visualize(solution);
+% end
+
+trajA.loc = '/Users/avalakmazaheri/Documents/GitHub/PredictExoGait/Track/';
+trajA.file = 'solution_prescribedGRFs.sto';
+trajB.loc = '../Experiment/';
+trajB.file = 'NW1_muscleDrivenIK_ground.sto';
+
+nameA = 'tracking output';
+nameB = 'reference';
+addpath('../Helpers/')
+mocoPlotTrajectoryfromFile(trajA.loc, trajA, trajB, nameA, nameB, [], []);
+
 
 
