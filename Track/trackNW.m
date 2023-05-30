@@ -132,9 +132,9 @@ problem = study.updProblem();
 % --------
 % This goal allows us to simulate only one step with left-right symmetry
 % that we can then double to create a full gait cycle.
-doSymmetry = false;
+s.doSymmetry = false;
 
-if doSymmetry
+if s.doSymmetry
     symmetryGoal = MocoPeriodicityGoal('symmetryGoal');
     problem.addGoal(symmetryGoal);
     model = modelProcessor.process();
@@ -322,6 +322,6 @@ grfB.file = file_referenceGRFmot;
 nameA = 'tracking output';
 nameB = 'reference';
 addpath([baseDir,'/Helpers/'])
-mocoPlotTrajectoryfromFile(resultsLoc, trajA, trajB, nameA, nameB, grfA, grfB);
+mocoPlotTrajectoryfromFile(resultsLoc, trajA, trajB, nameA, nameB, grfA, grfB, s);
 
 return

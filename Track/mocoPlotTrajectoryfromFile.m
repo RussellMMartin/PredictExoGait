@@ -1,6 +1,8 @@
 
 %% mocoPlotTrajectory plots states, controls, and grfs after trackNW runs
-function mocoPlotTrajectoryfromFile(saveLoc, trajA, trajB, nameA, nameB, grfA, grfB)
+% INPUTS
+%    oset: optimization settings. E.g. to determine reserve optimal force
+function mocoPlotTrajectoryfromFile(saveLoc, trajA, trajB, nameA, nameB, grfA, grfB, oset)
 % Plot a MocoTrajectory. Optionally, specify a second trajectory and names
 % for the trajectories.
 % Pass empty character '' if you don't want to save.
@@ -24,7 +26,7 @@ nFigs = nFigs + 1;
 %% Muscle force 
 commonName.include = {'force'};
 commonName.exclude = {'activation'};
-plotCategory(trajA, trajB, commonName, 'Muscle Force', {nameA, nameB})
+plotCategory(trajA, trajB, commonName, 'Muscle Force', {nameA, nameB}, oset)
 nFigs = nFigs + 1;
 
 
@@ -59,14 +61,13 @@ end
 return
 
 
-function plotCategory(seriesA, seriesB, commonName, topTitle, seriesNameAB)
+function plotCategory(seriesA, seriesB, commonName, topTitle, seriesNameAB, oset)
 
     figure('units','normalized','outerposition',[0 0 1 1]);
     [xA, yA, namesA] = getDataFromFile(seriesA.loc, seriesA.file, commonName);
     seriesNameA = seriesNameAB{1};
     numPlots = numel(namesA);
     width = 1.5;
-    
     
     plotB = false;
     if ~ischar(seriesB)
@@ -96,6 +97,9 @@ function plotCategory(seriesA, seriesB, commonName, topTitle, seriesNameAB)
         for j = 1:numel(namesA)
             if contains(namesA(j), plotTitle) || contains(plotTitle, namesA(j))
                 yA_plot = yA(:,j);
+                if contains(namesA(j), 'reserve') 
+                    yA_plot = yA_plot * oset.reserveOptimalForce;
+                end
                 plot(xA, yA_plot, '-r', 'linewidth', width);
                 break
             end
@@ -105,6 +109,9 @@ function plotCategory(seriesA, seriesB, commonName, topTitle, seriesNameAB)
             for j = 1:numel(namesB)
                 if contains(namesB(j), plotTitle) || contains(plotTitle, namesB(j))
                     yB_plot = yB(:,j);
+                    if contains(namesB(j), 'reserve')
+                        yB_plot = yB_plot * oset.reserveOptimalForce;
+                    end
                     plot(xB, yB_plot, '--b', 'linewidth', width);
                     break
                 end
@@ -124,7 +131,7 @@ function plotCategory(seriesA, seriesB, commonName, topTitle, seriesNameAB)
             plotTitle = regexprep(plotTitle, 'forceset', '');
             if contains(subplotTitles(i), 'ground')
                 ylim([0,1000])
-            else
+            elseif ~contains(subplotTitles(i), 'reserve')
                 ylim([0,1])
             end
         elseif contains(subplotTitles(i), 'speed') || contains(subplotTitles(i), 'velocity')
