@@ -60,10 +60,11 @@ import org.opensim.modeling.*;
 baseDir = fileparts(cd); 
 loc_ReferenceTrackingData = [baseDir,'/Experiment/'];
 file_ReferenceTrackingData = 'NW1_muscleDrivenIK_ground.sto';
-loc_referenceGRF = [baseDir,'/Experiment/'];
+loc_InitialGuess = [baseDir,'/Experiment/'];
+% file_InitialGuess = 'solution_prescribedGRFs_rename.sto'; % low resids
+% loc_referenceGRF = [baseDir,'/Experiment/'];
 file_referenceGRFxml = 'NW1_external_forces_trim_stride.xml';
 file_referenceGRFmot = 'NW1_grf_trim_stride.mot';
-% loc_ReferenceTrackingData = [baseDir,'/Experiment/NW1_muscleDrivenIK_ground.sto'];
 loc_model = [baseDir,'/Models/'];
 file_model = 'Ong_gait9dof18musc_addMarkers_scalePB.osim';
 s.ReferenceTrackingDataGRFDataAndModel = {file_ReferenceTrackingData, file_referenceGRFxml, file_model};
@@ -88,19 +89,16 @@ track.setName('gaitTracking');
 % Note: If s.GRFTrackingWeight is set to 0 then GRFs will not be tracked. Setting
 % s.GRFTrackingWeight to 1 will cause the total tracking error (states + GRF) to
 % have about the same magnitude as control effort in the final objective value.
-s.controlEffortWeight = .01;
-s.stateTrackingWeight = 10;
-s.GRFTrackingWeight   = 0.1; % TODO increase for initial guess (along w residuals)
-
+s.controlEffortWeight = 0.1;
+s.stateTrackingWeight = 0.1;
+s.GRFTrackingWeight   = 0.1;
 
 % Reference data for tracking problem
 % tableProcessor = TableProcessor('MocoT_muscleDriven_OpensimIK_raisePelvis2.sto');
-tableProcessor = TableProcessor([loc_ReferenceTrackingData, file_ReferenceTrackingData]);
-tableProcessor.append(TabOpLowPassFilter(6));
-
+% tableProcessor = TableProcessor([loc_ReferenceTrackingData, file_ReferenceTrackingData]);
+% tableProcessor.append(TabOpLowPassFilter(6));
 
 modelProcessor = ModelProcessor([loc_model, file_model]);
-% modelProcessor.append(ModOpAddExternalLoads("Day6_NW1_external_forces_trim.xml"));
 modelProcessor.append(ModOpIgnoreTendonCompliance());
 modelProcessor.append(ModOpReplaceMusclesWithDeGrooteFregly2016());
 % Only valid for DeGrooteFregly2016Muscles.
@@ -111,12 +109,22 @@ s.reserveOptimalForce = 10000;
 s.reserveBound = 1;
 modelProcessor.append(ModOpAddReserves(s.reserveOptimalForce, s.reserveBound));
 
+% added for moco labeling fix
+model = modelProcessor.process();
+model.initSystem();
+coordinates = TableProcessor([loc_ReferenceTrackingData, file_ReferenceTrackingData]);
+coordinates.append(TabOpLowPassFilter(6));
+coordinates.append(TabOpUseAbsoluteStateNames());
+% coordinatesRadians = coordinates.processAndConvertToRadians(model);
+tableProcessor = coordinates;
+
 track.setModel(modelProcessor);
 track.setStatesReference(tableProcessor);
 track.set_states_global_tracking_weight(s.stateTrackingWeight);
 track.set_allow_unused_references(true);
 track.set_track_reference_position_derivatives(true);
-track.set_apply_tracked_states_to_guess(true); % 
+track.set_apply_tracked_states_to_guess(true);
+% track.set_guess_file([loc_InitialGuess, file_InitialGuess]);
 track.set_initial_time(306.6);  % 306.6 (us) or 0 (ex) 
 track.set_final_time(307.85);    % 307.5 (us) or 0.47 (ex) stride is 307.8
 study = track.initialize();
@@ -214,22 +222,22 @@ end
 
 % Bounds
 % ======
-problem.setStateInfo('/jointset/groundPelvis/pelvis_tilt/value', [-20*pi/180, -10*pi/180]);
-problem.setStateInfo('/jointset/groundPelvis/pelvis_tx/value', [0, 1]);
-problem.setStateInfo('/jointset/groundPelvis/pelvis_ty/value', [0.75, 1.25]);
-problem.setStateInfo('/jointset/hip_l/hip_flexion_l/value', [-10*pi/180, 60*pi/180]);
-problem.setStateInfo('/jointset/hip_r/hip_flexion_r/value', [-10*pi/180, 60*pi/180]);
-problem.setStateInfo('/jointset/knee_l/knee_angle_l/value', [-50*pi/180, 0]);
-problem.setStateInfo('/jointset/knee_r/knee_angle_r/value', [-50*pi/180, 0]);
-problem.setStateInfo('/jointset/ankle_l/ankle_angle_l/value', [-15*pi/180, 25*pi/180]);
-problem.setStateInfo('/jointset/ankle_r/ankle_angle_r/value', [-15*pi/180, 25*pi/180]);
+problem.setStateInfo('/jointset/groundPelvis/pelvis_tilt/value', [-10*pi/180, 10*pi/180]);
+problem.setStateInfo('/jointset/groundPelvis/pelvis_tx/value', [1, 2.5]); % or 1 to 1.1
+problem.setStateInfo('/jointset/groundPelvis/pelvis_ty/value', [0.9, 1.25]);
+problem.setStateInfo('/jointset/hip_l/hip_flexion_l/value', [-1, 1]);
+problem.setStateInfo('/jointset/hip_r/hip_flexion_r/value', [-1, 1]);
+problem.setStateInfo('/jointset/knee_l/knee_angle_l/value', [-70*pi/180, 0]); % ran with [-1, 0])
+problem.setStateInfo('/jointset/knee_r/knee_angle_r/value', [-70*pi/180, 0]);
+problem.setStateInfo('/jointset/ankle_l/ankle_angle_l/value', [-40*pi/180, 25*pi/180]);
+problem.setStateInfo('/jointset/ankle_r/ankle_angle_r/value', [-40*pi/180, 25*pi/180]); % was [-40*pi/180, 15*pi/180]
 problem.setStateInfo('/jointset/lumbar/lumbar/value', [-0.0873, -0.0873]);
 
 % Reserves
 % ======
-model = modelProcessor.process();
-model.initSystem();
-s.reserveWeightForControl = 0.01;
+% model = modelProcessor.process();
+% model.initSystem();
+s.reserveWeightForControl = 10; 
 forceSet = model.getForceSet();
 for i = 0:forceSet.getSize()-1
    forcePath = forceSet.get(i).getAbsolutePathString();
@@ -283,6 +291,7 @@ close all;
 notFullStrideFilename = 'gaitTracking_solution_notFullStride.sto';
 gaitTrackingSolution.write([resultsLoc, notFullStrideFilename]);
 disp(['saved notFullStride to', resultsLoc, notFullStrideFilename]);
+
 fullStrideFilename = 'gaitTracking_solution_fullStride.sto';
 fullStride = opensimMoco.createPeriodicTrajectory(gaitTrackingSolution);
 fullStride.write([resultsLoc,fullStrideFilename]);
