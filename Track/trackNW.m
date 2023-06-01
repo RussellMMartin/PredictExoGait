@@ -60,9 +60,9 @@ import org.opensim.modeling.*;
 baseDir = fileparts(cd); 
 loc_ReferenceTrackingData = [baseDir,'/Experiment/'];
 file_ReferenceTrackingData = 'NW1_muscleDrivenIK_ground.sto';
-loc_InitialGuess = [baseDir,'/Experiment/'];
-% file_InitialGuess = 'solution_prescribedGRFs_rename.sto'; % low resids
-% loc_referenceGRF = [baseDir,'/Experiment/'];
+loc_InitialGuess = [baseDir,'\Track\Results\2023-06-01 1R\'];
+file_InitialGuess = 'gaitTracking_solution_notFullStride.sto'; % low resids
+loc_referenceGRF = [baseDir,'/Experiment/'];
 file_referenceGRFxml = 'NW1_external_forces_trim_stride.xml';
 file_referenceGRFmot = 'NW1_grf_trim_stride.mot';
 loc_model = [baseDir,'/Models/'];
@@ -261,6 +261,7 @@ solver.set_optim_convergence_tolerance(s.optimConvergenceTolerance);
 % in future, use convergence analysis to determine tolerances
 solver.set_optim_constraint_tolerance(s.optimConstraintTolerance); % 10e-3 or 10e-4
 % solver.set_optim_max_iterations(500);
+solver.setGuessFile([loc_InitialGuess, file_InitialGuess])
 gaitTrackingSolution = study.solve();
 
 gaitTrackingSolutionUnsealed = gaitTrackingSolution.unseal();
