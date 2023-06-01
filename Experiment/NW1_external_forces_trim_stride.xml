@@ -18,6 +18,6 @@
                 <torque_identifier>ground_force_r_m</torque_identifier>
             </ExternalForce>
         </objects>
-        <datafile>NW1_grf_trim_stride.mot</datafile>
+        <datafile>grfs_filtered.sto</datafile>
     </ExternalLoads>
 </OpenSimDocument>

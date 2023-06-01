@@ -60,11 +60,11 @@ import org.opensim.modeling.*;
 baseDir = fileparts(cd); 
 loc_ReferenceTrackingData = [baseDir,'/Experiment/'];
 file_ReferenceTrackingData = 'NW1_muscleDrivenIK_ground.sto';
-loc_InitialGuess = [baseDir,'/Experiment/'];
+% loc_InitialGuess = [baseDir,'/Experiment/'];
 % file_InitialGuess = 'solution_prescribedGRFs_rename.sto'; % low resids
-% loc_referenceGRF = [baseDir,'/Experiment/'];
+loc_referenceGRF = [baseDir,'/Experiment/'];
 file_referenceGRFxml = 'NW1_external_forces_trim_stride.xml';
-file_referenceGRFmot = 'NW1_grf_trim_stride.mot';
+file_referenceGRFmot = 'grfs_filtered.sto';
 loc_model = [baseDir,'/Models/'];
 file_model = 'Ong_gait9dof18musc_addMarkers_scalePB.osim';
 s.ReferenceTrackingDataGRFDataAndModel = {file_ReferenceTrackingData, file_referenceGRFxml, file_model};
@@ -89,8 +89,8 @@ track.setName('gaitTracking');
 % Note: If s.GRFTrackingWeight is set to 0 then GRFs will not be tracked. Setting
 % s.GRFTrackingWeight to 1 will cause the total tracking error (states + GRF) to
 % have about the same magnitude as control effort in the final objective value.
-s.controlEffortWeight = 0.1;
-s.stateTrackingWeight = 0.1;
+s.controlEffortWeight = 0;
+s.stateTrackingWeight = 1;
 s.GRFTrackingWeight   = 0.1;
 
 % Reference data for tracking problem
@@ -201,7 +201,20 @@ end
 effort = MocoControlGoal.safeDownCast(problem.updGoal('control_effort'));
 effort.setWeight(s.controlEffortWeight);
 
-% Optionally, add a contact tracking goal.
+% % Optionally, add a contact tracking goal.
+% sto = STOFileAdapter();
+% grfs = TableProcessor([loc_referenceGRF, file_referenceGRFmot]);
+% grfs.append(TabOpLowPassFilter(50));
+% grfTable = grfs.process();
+% grfTable.trim(306.6, 307.85);
+% sto.write(grfTable, "grfs_filtered.sto");
+% 
+% grfA.loc = '/Users/avalakmazaheri/Documents/GitHub/PredictExoGait/Track/';
+% grfB.loc = '/Users/avalakmazaheri/Documents/GitHub/PredictExoGait/Track/';
+% grfA.file = 'NW1_grf_trim_stride.mot';
+% grfB.file = 'grfs_filtered.sto';
+
+
 if s.GRFTrackingWeight ~= 0
     % Track the right and left vertical and fore-aft ground reaction forces.
     contactTracking = MocoContactTrackingGoal('contact', s.GRFTrackingWeight);
@@ -250,7 +263,7 @@ end
 % Configure and solve the problem
 % =================
 s.numMeshIntervals = 50;
-s.optimConvergenceTolerance = 1e0;
+s.optimConvergenceTolerance = 1e-1;
 s.optimConstraintTolerance = 1e-3;
 solver = study.initCasADiSolver();
 solver.set_num_mesh_intervals(s.numMeshIntervals);
