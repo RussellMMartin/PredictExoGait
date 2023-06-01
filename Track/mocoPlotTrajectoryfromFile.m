@@ -2,7 +2,7 @@
 %% mocoPlotTrajectory plots states, controls, and grfs after trackNW runs
 % INPUTS
 %    oset: optimization settings. E.g. to determine reserve optimal force
-function mocoPlotTrajectoryfromFile(saveLoc, trajA, trajB, nameA, nameB, grfA, grfB, oset)
+function mocoPlotTrajectoryfromFile(saveLoc, trajA, trajB, nameA, nameB, grfA, grfB, oset, model)
 % Plot a MocoTrajectory. Optionally, specify a second trajectory and names
 % for the trajectories.
 % Pass empty character '' if you don't want to save.
@@ -26,7 +26,7 @@ nFigs = nFigs + 1;
 %% Muscle force 
 commonName.include = {'force'};
 commonName.exclude = {'activation'};
-plotCategory(trajA, trajB, commonName, 'Muscle Force', {nameA, nameB}, oset)
+plotCategory(trajA, trajB, commonName, 'Muscle Force', {nameA, nameB}, oset, model)
 nFigs = nFigs + 1;
 
 
@@ -61,7 +61,7 @@ end
 return
 
 
-function plotCategory(seriesA, seriesB, commonName, topTitle, seriesNameAB, oset)
+function plotCategory(seriesA, seriesB, commonName, topTitle, seriesNameAB, oset, model)
 
     figure('units','normalized','outerposition',[0 0 1 1]);
     [xA, yA, namesA] = getDataFromFile(seriesA.loc, seriesA.file, commonName);
@@ -88,22 +88,31 @@ function plotCategory(seriesA, seriesB, commonName, topTitle, seriesNameAB, oset
     
     numCols = 4;
     numRows = ceil(numPlots/numCols);
+
+    
     
     for i=1:numPlots
         subplot(numRows, numCols, i)
         plotTitle = subplotTitles(i);
         % disp(['plotTitle=',plotTitle])
-        
+
+        yA_plot = [];
         for j = 1:numel(namesA)
             if contains(namesA(j), plotTitle) || contains(plotTitle, namesA(j))
                 yA_plot = yA(:,j);
                 if contains(namesA(j), 'reserve') 
                     yA_plot = yA_plot * oset.reserveOptimalForce;
                 end
-                plot(xA, yA_plot, '-r', 'linewidth', width);
+                if strcmp(topTitle, 'Muscle Force') % scale to max iso force
+                    yA_plot = yA_plot.*getMuscleMaxIsoForce(model, plotTitle);
+                end
+                if numel(yA_plot) > 0
+                    plot(xA, yA_plot, '-r', 'linewidth', width);
+                end
                 break
             end
         end
+        yB_plot = [];
         if plotB && numel(namesB) > 0
             hold on;
             for j = 1:numel(namesB)
@@ -112,7 +121,12 @@ function plotCategory(seriesA, seriesB, commonName, topTitle, seriesNameAB, oset
                     if contains(namesB(j), 'reserve')
                         yB_plot = yB_plot * oset.reserveOptimalForce;
                     end
-                    plot(xB, yB_plot, '--b', 'linewidth', width);
+                    if strcmp(topTitle, 'Muscle Force') % scale to max iso force
+                        yB_plot = yB_plot.*getMuscleMaxIsoForce(model, plotTitle);
+                    end
+                    if numel(yB_plot) > 0
+                        plot(xB, yB_plot, '--b', 'linewidth', width);
+                    end
                     break
                 end
             end
@@ -128,11 +142,12 @@ function plotCategory(seriesA, seriesB, commonName, topTitle, seriesNameAB, oset
             ylim([0,1])
         elseif contains(subplotTitles(i), 'force')
             ylabel('Force (N?)');
+            if contains(subplotTitles(i), 'reserve')
+                ylabel('Torque (N*m?)');
+            end
             plotTitle = regexprep(plotTitle, 'forceset', '');
-            if contains(subplotTitles(i), 'ground')
-                ylim([0,1000])
-            elseif ~contains(subplotTitles(i), 'reserve')
-                ylim([0,1])
+            if contains(subplotTitles(i), 'ground_force')
+                ylim([0,1000]);
             end
         elseif contains(subplotTitles(i), 'speed') || contains(subplotTitles(i), 'velocity')
             ylabel('Velocity (rad/s?)');
@@ -146,13 +161,52 @@ function plotCategory(seriesA, seriesB, commonName, topTitle, seriesNameAB, oset
             ylabel('TODO YLABEL')
         end
         plotTitle = regexprep(plotTitle, '/', ' ');
-        title(plotTitle, 'Interpreter', 'none');
+        if numel(yA_plot) > 0 && numel(yB_plot) > 0 
+            [err_rmse, err_max] = getErrorMetrics(xA, yA_plot, xB, yB_plot);
+            plotTitle = [plotTitle, 'RMSE=', num2str(round(err_rmse,2)), 'max=', num2str(round(err_max,2))];
+        end
+        title(strjoin(plotTitle), 'Interpreter', 'none');
     end
     sgtitle([topTitle,' (red=',seriesNameA,', blue=',seriesNameB,')'])
 
 return
 
-%%
+function [err_rmse, err_max] = getErrorMetrics(xA, yA, xB, yB)
+
+    % find time where A and B data overlap, find time step for data
+    tStart = max([xA(1), xB(1)]);
+    tEnd = min([xA(end), xB(end)]);
+    step = min([xA(2)-xA(1), xB(2)-xB(1)]);
+
+    % make interpolated x's and y's
+    x_i = tStart:step:tEnd;
+    yA_i = interp1(xA, yA, x_i);
+    yB_i = interp1(xB, yB, x_i);
+
+    err_rmse = rmse(yA_i, yB_i);
+    err_max = max(abs(yA_i - yB_i));
+
+return
+
+function maxIsoForce = getMuscleMaxIsoForce(model, outMuscleName)
+    forceSet = model.getForceSet();
+    muscleNames = cell(forceSet.getSize(),1);
+    for i=0:forceSet.getSize()-1
+        force = forceSet.get(i);
+        muscleNames{i+1} = char(force.getName());
+    end
+
+    outMuscleName = regexprep(outMuscleName, '/forceset/','');
+    idx = find(contains(muscleNames,outMuscleName));
+    try 
+        maxIsoForce = forceSet.get(idx-1).getPropertyByName('max_isometric_force');
+        maxIsoForce = str2double(char(maxIsoForce));
+    catch 
+        maxIsoForce = 1;
+    end
+    disp([outMuscleName, num2str(maxIsoForce)])
+return
+
 function [x, y, names] = getDataFromFile(loc, file, commonName)
     [data, C, ~] = readMOTSTOTRCfiles(loc, file);
     x = data(:,1);
