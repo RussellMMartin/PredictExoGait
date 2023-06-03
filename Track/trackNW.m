@@ -60,7 +60,7 @@ import org.opensim.modeling.*;
 baseDir = fileparts(cd); 
 loc_ReferenceTrackingData = [baseDir,'/Experiment/'];
 file_ReferenceTrackingData = 'NW1_muscleDrivenIK_ground.sto';
-loc_InitialGuess = [baseDir,'\Track\Results\2023-06-01 1R\'];
+loc_InitialGuess = [baseDir,'\Track\Results\2023-06-01 4R\'];
 file_InitialGuess = 'gaitTracking_solution_notFullStride.sto'; % low resids
 loc_referenceGRF = [baseDir,'/Experiment/'];
 file_referenceGRFxml = 'NW1_external_forces_trim_stride.xml';
@@ -89,9 +89,9 @@ track.setName('gaitTracking');
 % Note: If s.GRFTrackingWeight is set to 0 then GRFs will not be tracked. Setting
 % s.GRFTrackingWeight to 1 will cause the total tracking error (states + GRF) to
 % have about the same magnitude as control effort in the final objective value.
-s.controlEffortWeight = 0.1;
-s.stateTrackingWeight = 0.1;
-s.GRFTrackingWeight   = 0.1;
+s.controlEffortWeight = 0.01;
+s.stateTrackingWeight = 10;
+s.GRFTrackingWeight   = 0.05;
 
 % Reference data for tracking problem
 % tableProcessor = TableProcessor('MocoT_muscleDriven_OpensimIK_raisePelvis2.sto');
@@ -105,7 +105,7 @@ modelProcessor.append(ModOpReplaceMusclesWithDeGrooteFregly2016());
 modelProcessor.append(ModOpIgnorePassiveFiberForcesDGF());
 % Only valid for DeGrooteFregly2016Muscles.
 modelProcessor.append(ModOpScaleActiveFiberForceCurveWidthDGF(1.5));
-s.reserveOptimalForce = 10000;
+s.reserveOptimalForce = 5;
 s.reserveBound = 1;
 modelProcessor.append(ModOpAddReserves(s.reserveOptimalForce, s.reserveBound));
 
@@ -237,7 +237,7 @@ problem.setStateInfo('/jointset/lumbar/lumbar/value', [-0.0873, -0.0873]);
 % ======
 % model = modelProcessor.process();
 % model.initSystem();
-s.reserveWeightForControl = 10; 
+s.reserveWeightForControl = 15; 
 forceSet = model.getForceSet();
 for i = 0:forceSet.getSize()-1
    forcePath = forceSet.get(i).getAbsolutePathString();
@@ -250,8 +250,8 @@ end
 % Configure and solve the problem
 % =================
 s.numMeshIntervals = 50;
-s.optimConvergenceTolerance = 1e0;
-s.optimConstraintTolerance = 1e-3;
+s.optimConvergenceTolerance = 1e-3;
+s.optimConstraintTolerance = 1e-1;
 solver = study.initCasADiSolver();
 solver.set_num_mesh_intervals(s.numMeshIntervals);
 solver.set_verbosity(2);
@@ -332,6 +332,6 @@ grfB.file = file_referenceGRFmot;
 nameA = 'tracking output';
 nameB = 'reference';
 addpath([baseDir,'/Helpers/'])
-mocoPlotTrajectoryfromFile(resultsLoc, trajA, trajB, nameA, nameB, grfA, grfB, s);
+mocoPlotTrajectoryfromFile(resultsLoc, trajA, trajB, nameA, nameB, grfA, grfB, s, model);
 
 return
