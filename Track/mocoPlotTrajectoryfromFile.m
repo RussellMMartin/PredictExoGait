@@ -88,7 +88,7 @@ function plotCategory(seriesA, seriesB, commonName, topTitle, seriesNameAB, oset
     
     numCols = 4;
     numRows = ceil(numPlots/numCols);
-
+    allRMSEs = [];
     
     
     for i=1:numPlots
@@ -163,11 +163,17 @@ function plotCategory(seriesA, seriesB, commonName, topTitle, seriesNameAB, oset
         plotTitle = regexprep(plotTitle, '/', ' ');
         if numel(yA_plot) > 0 && numel(yB_plot) > 0 
             [err_rmse, err_max] = getErrorMetrics(xA, yA_plot, xB, yB_plot);
+            allRMSEs(end+1) = err_rmse;
             plotTitle = [plotTitle, 'RMSE=', num2str(round(err_rmse,2)), 'max=', num2str(round(err_max,2))];
         end
         title(strjoin(plotTitle), 'Interpreter', 'none');
     end
-    sgtitle([topTitle,' (red=',seriesNameA,', blue=',seriesNameB,')'])
+    if numel(allRMSEs)>0
+        sgtitle(strjoin([topTitle,' (red=',seriesNameA,', blue=',seriesNameB,'); avg, max RMSE = ', ...
+            string(mean(allRMSEs)), ', ', string(max(allRMSEs))]))
+    else
+        sgtitle([topTitle,' (red=',seriesNameA,', blue=',seriesNameB,')'])
+    end
 
 return
 
