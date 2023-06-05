@@ -89,9 +89,9 @@ track.setName('gaitTracking');
 % Note: If s.GRFTrackingWeight is set to 0 then GRFs will not be tracked. Setting
 % s.GRFTrackingWeight to 1 will cause the total tracking error (states + GRF) to
 % have about the same magnitude as control effort in the final objective value.
-s.controlEffortWeight = 10; %.01
-s.stateTrackingWeight = 10; %10
-s.GRFTrackingWeight   = 0.1;
+s.controlEffortWeight = 0.0; %.01
+s.stateTrackingWeight = 0.0; %10
+s.GRFTrackingWeight   = 0.05;
 
 % Reference data for tracking problem
 % tableProcessor = TableProcessor('MocoT_muscleDriven_OpensimIK_raisePelvis2.sto');
@@ -237,7 +237,7 @@ problem.setStateInfo('/jointset/lumbar/lumbar/value', [-0.0873, -0.0873]);
 % ======
 % model = modelProcessor.process();
 % model.initSystem();
-s.reserveWeightForControl = 15; 
+s.reserveWeightForControl = 10; 
 forceSet = model.getForceSet();
 for i = 0:forceSet.getSize()-1
    forcePath = forceSet.get(i).getAbsolutePathString();
