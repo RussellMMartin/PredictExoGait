@@ -60,8 +60,8 @@ import org.opensim.modeling.*;
 baseDir = fileparts(cd); 
 loc_ReferenceTrackingData = [baseDir,'/Experiment/'];
 file_ReferenceTrackingData = 'NW1_muscleDrivenIK_ground.sto';
-% loc_InitialGuess = [baseDir,'/Experiment/'];
-% file_InitialGuess = 'solution_prescribedGRFs_rename.sto'; % low resids
+loc_InitialGuess = [baseDir,'\Track\Results\2023-06-01 4R\'];
+file_InitialGuess = 'gaitTracking_solution_notFullStride.sto'; % low resids
 loc_referenceGRF = [baseDir,'/Experiment/'];
 file_referenceGRFxml = 'NW1_external_forces_trim_stride.xml';
 file_referenceGRFmot = 'grfs_filtered.sto';
@@ -89,8 +89,8 @@ track.setName('gaitTracking');
 % Note: If s.GRFTrackingWeight is set to 0 then GRFs will not be tracked. Setting
 % s.GRFTrackingWeight to 1 will cause the total tracking error (states + GRF) to
 % have about the same magnitude as control effort in the final objective value.
-s.controlEffortWeight = 0;
-s.stateTrackingWeight = 1;
+s.controlEffortWeight = 10; %.01
+s.stateTrackingWeight = 10; %10
 s.GRFTrackingWeight   = 0.1;
 
 % Reference data for tracking problem
@@ -105,7 +105,7 @@ modelProcessor.append(ModOpReplaceMusclesWithDeGrooteFregly2016());
 modelProcessor.append(ModOpIgnorePassiveFiberForcesDGF());
 % Only valid for DeGrooteFregly2016Muscles.
 modelProcessor.append(ModOpScaleActiveFiberForceCurveWidthDGF(1.5));
-s.reserveOptimalForce = 10000;
+s.reserveOptimalForce = 5;
 s.reserveBound = 1;
 modelProcessor.append(ModOpAddReserves(s.reserveOptimalForce, s.reserveBound));
 
@@ -123,8 +123,8 @@ track.setStatesReference(tableProcessor);
 track.set_states_global_tracking_weight(s.stateTrackingWeight);
 track.set_allow_unused_references(true);
 track.set_track_reference_position_derivatives(true);
-track.set_apply_tracked_states_to_guess(true);
-% track.set_guess_file([loc_InitialGuess, file_InitialGuess]);
+% track.set_apply_tracked_states_to_guess(true);
+track.set_guess_file([loc_InitialGuess, file_InitialGuess]); 
 track.set_initial_time(306.6);  % 306.6 (us) or 0 (ex) 
 track.set_final_time(307.85);    % 307.5 (us) or 0.47 (ex) stride is 307.8
 study = track.initialize();
@@ -250,7 +250,7 @@ problem.setStateInfo('/jointset/lumbar/lumbar/value', [-0.0873, -0.0873]);
 % ======
 % model = modelProcessor.process();
 % model.initSystem();
-s.reserveWeightForControl = 10; 
+s.reserveWeightForControl = 15; 
 forceSet = model.getForceSet();
 for i = 0:forceSet.getSize()-1
    forcePath = forceSet.get(i).getAbsolutePathString();
@@ -274,6 +274,7 @@ solver.set_optim_convergence_tolerance(s.optimConvergenceTolerance);
 % in future, use convergence analysis to determine tolerances
 solver.set_optim_constraint_tolerance(s.optimConstraintTolerance); % 10e-3 or 10e-4
 % solver.set_optim_max_iterations(500);
+solver.setGuessFile([loc_InitialGuess, file_InitialGuess])
 gaitTrackingSolution = study.solve();
 
 gaitTrackingSolutionUnsealed = gaitTrackingSolution.unseal();
@@ -344,6 +345,6 @@ grfB.file = file_referenceGRFmot;
 nameA = 'tracking output';
 nameB = 'reference';
 addpath([baseDir,'/Helpers/'])
-mocoPlotTrajectoryfromFile(resultsLoc, trajA, trajB, nameA, nameB, grfA, grfB, s);
+mocoPlotTrajectoryfromFile(resultsLoc, trajA, trajB, nameA, nameB, grfA, grfB, s, model);
 
 return
