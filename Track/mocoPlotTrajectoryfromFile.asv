@@ -209,7 +209,7 @@ function maxIsoForce = getMuscleMaxIsoForce(model, outMuscleName)
     catch 
         maxIsoForce = 1;
     end
-    % disp([outMuscleName, num2str(maxIsoForce)])
+    disp([outMuscleName, num2str(maxIsoForce)])
 return
 
 function [x, y, names] = getDataFromFile(loc, file, commonName)
