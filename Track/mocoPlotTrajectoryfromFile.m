@@ -141,16 +141,16 @@ function plotCategory(seriesA, seriesB, commonName, topTitle, seriesNameAB, oset
             plotTitle = regexprep(plotTitle, 'forceset', '');
             ylim([0,1])
         elseif contains(subplotTitles(i), 'force')
-            ylabel('Force (N?)');
+            ylabel('Force (N)');
             if contains(subplotTitles(i), 'reserve')
-                ylabel('Torque (N*m?)');
+                ylabel('Torque (N*m)');
             end
             plotTitle = regexprep(plotTitle, 'forceset', '');
-            if contains(subplotTitles(i), 'ground_force')
-                ylim([0,1000]);
-            end
+            % if contains(subplotTitles(i), 'ground_force')
+            %     ylim([0,1000]);
+            % end
         elseif contains(subplotTitles(i), 'speed') || contains(subplotTitles(i), 'velocity')
-            ylabel('Velocity (rad/s?)');
+            ylabel('Velocity (rad/s)');
         elseif contains(subplotTitles(i), 'position') || contains(subplotTitles(i), 'angle') || contains(subplotTitles(i), 'value')
             ylabel('Angle (rad)');
             plotTitle = regexprep(plotTitle, 'value', '');
@@ -164,7 +164,7 @@ function plotCategory(seriesA, seriesB, commonName, topTitle, seriesNameAB, oset
         if numel(yA_plot) > 0 && numel(yB_plot) > 0 
             [err_rmse, err_max] = getErrorMetrics(xA, yA_plot, xB, yB_plot);
             allRMSEs(end+1) = err_rmse;
-            plotTitle = [plotTitle, 'RMSE=', num2str(round(err_rmse,2)), 'max=', num2str(round(err_max,2))];
+            plotTitle = [plotTitle, 'RMSE =', num2str(round(err_rmse,2)), 'max =', num2str(round(err_max,2))];
         end
         title(strjoin(plotTitle), 'Interpreter', 'none');
     end

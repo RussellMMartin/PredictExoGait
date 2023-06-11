@@ -89,7 +89,7 @@ track.setName('gaitTracking');
 % Note: If s.GRFTrackingWeight is set to 0 then GRFs will not be tracked. Setting
 % s.GRFTrackingWeight to 1 will cause the total tracking error (states + GRF) to
 % have about the same magnitude as control effort in the final objective value.
-s.controlEffortWeight = 10; %.01
+s.controlEffortWeight = 0; %10
 s.stateTrackingWeight = 10; %10
 s.GRFTrackingWeight   = 0.1;
 
@@ -263,7 +263,7 @@ end
 % Configure and solve the problem
 % =================
 s.numMeshIntervals = 50;
-s.optimConvergenceTolerance = 1e-1;
+s.optimConvergenceTolerance = 1e0;
 s.optimConstraintTolerance = 1e-3;
 solver = study.initCasADiSolver();
 solver.set_num_mesh_intervals(s.numMeshIntervals);
